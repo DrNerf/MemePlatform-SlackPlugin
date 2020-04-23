@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <RootNamespace>Meme_Platform.Plugin.Slack</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="nfslblsv.uj2~" />
+    <None Remove="Templates\new-post.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Templates\new-post.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Meme-Platform.Core">
+      <HintPath>..\lib\Meme-Platform.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Meme-Platform.DAL">
+      <HintPath>..\lib\Meme-Platform.DAL.dll</HintPath>
+    </Reference>
+    <Reference Include="Meme-Platform.IL">
+      <HintPath>..\lib\Meme-Platform.IL.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
