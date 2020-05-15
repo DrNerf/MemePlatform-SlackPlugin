@@ -3,9 +3,12 @@ using Meme_Platform.Core.Models;
 using Meme_Platform.Plugin.Slack.Models;
 using Microsoft.Extensions.Configuration;
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Authentication;
 using System.Threading.Tasks;
@@ -16,31 +19,30 @@ namespace Meme_Platform.Plugin.Slack.Services.Impl
     internal class SlackService : ISlackService
     {
         private readonly IConfiguration configuration;
-        private readonly UIConfig uiConfig;
+        private readonly ITemplateEngine templateEngine;
 
-        public SlackService(IConfiguration configuration, UIConfig uiConfig)
+        public SlackService(IConfiguration configuration, ITemplateEngine templateEngine)
         {
             this.configuration = configuration;
-            this.uiConfig = uiConfig;
+            this.templateEngine = templateEngine;
         }
 
         public async Task SendPostMessage(PostModel model)
         {
             using (var client = SetupSlackClient())
             {
-                SendMessageRequestModel request = new SendMessageRequestModel
-                {
-                    Text = model.Title,
-                    IconUrl = uiConfig.SiteFavicon,
-                    Username = uiConfig.SiteName,
-                    Channel = configuration["Slack:Channel"]
-                };
-                var result = await client.PostAsJsonAsync("https://slack.com/api/chat.postMessage", request);
+                var body = await templateEngine.RenderTemplate(
+                    "new-post",
+                    new KeyValuePair<string, string>("post-title", model.Title),
+                    new KeyValuePair<string, string>("post-score", model.CalculateScore().ToString()));
+                var content = new StringContent(body);
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                var result = await client.PostAsync("https://slack.com/api/chat.postMessage", content);
                 var response = await result.Content.ReadAsJsonAsync<SlackResponseModel>();
 
                 if (!response.Ok)
                 {
-                    throw new Exception($"Failed to notify SLACK channel {request.Channel} for post {model.Id}\n" +
+                    throw new Exception($"Failed to notify SLACK for post {model.Id}\n" +
                         $"Slack server responed with HTTP {result.StatusCode} and ERR {response.Error}");
                 }
             }

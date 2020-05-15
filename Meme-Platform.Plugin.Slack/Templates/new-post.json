@@ -1,4 +1,7 @@
 {
+  "channel": "#channel#",
+  "icon_url": "#icon_url#",
+  "username": "#username#",
   "blocks": [
     {
       "type": "section",
@@ -13,7 +16,7 @@
       "alt_text": "image",
       "title": {
         "type": "plain_text",
-        "text": "Post title"
+        "text": "#post-title#"
       }
     },
     {
@@ -24,7 +27,7 @@
       "elements": [
         {
           "type": "mrkdwn",
-          "text": "*Score:* 13"
+          "text": "*Score:* #post-score#"
         }
       ]
     },

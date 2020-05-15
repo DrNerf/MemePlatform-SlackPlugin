@@ -1,3 +1,4 @@
+using Meme_Platform.Core.Models;
 using Meme_Platform.Plugin.Slack.Services.Impl;
 using Microsoft.Extensions.Configuration;
 using Moq;
@@ -21,8 +22,22 @@ namespace Meme_Platform.Plugin.Slack.Tests
         [Test]
         public void SendMessage()
         {
-            new SlackService(configuration.Object, new Core.UIConfig(configuration.Object)).SendPostMessage(
-                new Core.Models.PostModel { Title = "Hello world!" }).Wait();
+            IConfiguration configObject = configuration.Object;
+            new SlackService(configObject, new TemplateEngine(new Core.UIConfig(configObject), configObject))
+                .SendPostMessage(new PostModelMock()).Wait();
+        }
+
+        class PostModelMock : PostModel
+        {
+            public PostModelMock()
+            {
+                Title = "Post title";
+            }
+
+            public new int CalculateScore()
+            {
+                return 69;
+            }
         }
     }
 }
