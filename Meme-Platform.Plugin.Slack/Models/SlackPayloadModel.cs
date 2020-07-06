@@ -5,18 +5,18 @@ using System.Text;
 
 namespace Meme_Platform.Plugin.Slack.Models
 {
-    internal class SendMessageRequestModel
+    internal class SlackPayloadModel
     {
         [JsonProperty("text")]
         public string Text { get; set; }
 
-        [JsonProperty("icon_url")]
-        public string IconUrl { get; set; }
-
         [JsonProperty("username")]
         public string Username { get; set; }
 
-        [JsonProperty("channel")]
-        public string Channel { get; set; }
+        [JsonProperty("icon_url")]
+        public string Icon { get; set; }
+
+        [JsonProperty("attachments")]
+        public IList<AttachmentModel> Attachments { get; set; } = new List<AttachmentModel>();
     }
 }

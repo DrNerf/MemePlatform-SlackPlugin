@@ -7,11 +7,6 @@
 
   <ItemGroup>
     <None Remove="nfslblsv.uj2~" />
-    <None Remove="Templates\new-post.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Templates\new-post.json" />
   </ItemGroup>
 
   <ItemGroup>

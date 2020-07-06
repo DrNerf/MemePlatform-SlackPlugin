@@ -1,67 +1,85 @@
-﻿using Meme_Platform.Core;
-using Meme_Platform.Core.Models;
+﻿using Meme_Platform.Core.Models;
 using Meme_Platform.Plugin.Slack.Models;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Security.Authentication;
-using System.Threading.Tasks;
+using System.Text;
 
 [assembly: InternalsVisibleTo("Meme-Platform.Plugin.Slack.Tests")]
 namespace Meme_Platform.Plugin.Slack.Services.Impl
 {
     internal class SlackService : ISlackService
     {
-        private readonly IConfiguration configuration;
-        private readonly ITemplateEngine templateEngine;
+        private const string TitleTemplate = "<{0}|{1}>";
 
-        public SlackService(IConfiguration configuration, ITemplateEngine templateEngine)
+        private readonly IConfiguration configuration;
+
+        public SlackService(IConfiguration configuration)
         {
             this.configuration = configuration;
-            this.templateEngine = templateEngine;
         }
 
-        public async Task SendPostMessage(PostModel model)
+        public void SendNotification(PostModel post)
         {
-            using (var client = SetupSlackClient())
+            var hook = configuration["Slack:Hook"];
+            if (!string.IsNullOrEmpty(hook))
             {
-                var body = await templateEngine.RenderTemplate(
-                    "new-post",
-                    new KeyValuePair<string, string>("post-title", model.Title),
-                    new KeyValuePair<string, string>("post-score", model.CalculateScore().ToString()));
-                var content = new StringContent(body);
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                var result = await client.PostAsync("https://slack.com/api/chat.postMessage", content);
-                var response = await result.Content.ReadAsJsonAsync<SlackResponseModel>();
-
-                if (!response.Ok)
+                string websiteUrl = configuration["UI:WebSiteHostUrl"];
+                var payload = new SlackPayloadModel
                 {
-                    throw new Exception($"Failed to notify SLACK for post {model.Id}\n" +
-                        $"Slack server responed with HTTP {result.StatusCode} and ERR {response.Error}");
+                    Text = string.Format(TitleTemplate,
+                            $"{websiteUrl}/Posts/View/{post.Id}",
+                            post.Title),
+                    Username = configuration["UI:Name"],
+                    Icon = configuration["UI:Favicon"]
+                };
+
+                AttachmentModel attachment = null;
+                if (post.IsNSFW)
+                {
+                    payload.Text += "\nThe post is flagged as NSFW. There will not be any kind of preview in slack, please view the post by following the provided link.";
+                }
+                else if (post.Content.ContentType == ContentType.Image)
+                {
+                    // Yeah I know I'm disgusting :(
+                    if (websiteUrl != "http://localhost")
+                    {
+                        attachment = new AttachmentModel(
+                                        $"{websiteUrl}/image/{post.Content.Id}{post.Content.Extension}"); 
+                    }
+                    else
+                    {
+                        attachment = new AttachmentModel(
+                                        $"https://steamuserimages-a.akamaihd.net/ugc/934963999954440659/F7EA1482B7967952540BB8F0CEE0822048BDE466/");
+                    }
+                }
+                else
+                {
+                    var videoUrl = Encoding.UTF8.GetString(post.Content.Data);
+                    payload.Text += $"\n{videoUrl}";
+                }
+
+                if (attachment != null)
+                {
+                    payload.Attachments.Add(attachment);
+                }
+
+                using (var client = new HttpClient())
+                {
+                    // We can sync the task right here. The Meme Platform will invoke this in a background thread anyway.
+                    var result = client.PostAsJsonAsync(hook, payload).Result;
+                    if (result.IsSuccessStatusCode)
+                    {
+                        return;
+                    }
+
+                    throw new Exception($"Slack responded with: {result.StatusCode} {result.ReasonPhrase}");
                 }
             }
-        }
 
-        private HttpClient SetupSlackClient()
-        {
-            var handler = new HttpClientHandler
-            {
-                SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls11 | SslProtocols.Tls,
-                ServerCertificateCustomValidationCallback = (m, cert, ch, err) => true
-            };
-
-            HttpClient client = new HttpClient(handler);
-            client.DefaultRequestHeaders.Accept
-                .Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", configuration["Slack:OauthToken"]);
-
-            return client;
+            throw new Exception("Cannot post on slack. No hook url configured!");
         }
     }
 }

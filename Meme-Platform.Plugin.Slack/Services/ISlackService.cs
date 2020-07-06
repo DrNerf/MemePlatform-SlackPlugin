@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Meme_Platform.Core.Models;
 
 namespace Meme_Platform.Plugin.Slack.Services
 {
-    public class ISlackService
+    public interface ISlackService
     {
+        void SendNotification(PostModel post);
     }
 }
